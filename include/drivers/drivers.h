@@ -147,7 +147,8 @@ void ob_virtio_init(const char *path, const char *dev_name, uint64_t common_cfg,
                     int idx);
 #endif
 #ifdef CONFIG_DRIVER_FLIPPER_VI
-int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long fb_base);
+int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long fb_base,
+                       unsigned long fb_addr, int starlet);
 #endif
 #ifdef CONFIG_DRIVER_WII_SDHC
 int ob_wii_shdc_init(const char *path, unsigned long mmio_base);

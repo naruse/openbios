@@ -88,7 +88,17 @@ static void vi_set_xfb(unsigned long fb_addr) {
   vi_write32(WII_VI_REG_BFBL, WII_VI_REG_BFBL_PAGE_OFFSET | (fb_addr >> 5));
 }
 
-int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long fb_base) {
+//
+// xfb_base: the YUV frame buffer the video interface scans out.
+// fb_base:  physical address of an RGB (640x480x32) frame buffer for clients
+//           to draw into, or 0 to have them draw straight into the XFB.
+// fb_addr:  the address clients are given for the RGB frame buffer (the
+//           display node's "address" property). Normally equal to fb_base.
+// starlet:  non-zero to ask Starlet to convert the RGB frame buffer to the
+//           XFB. Without it something else has to do that conversion.
+//
+int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long fb_base,
+                       unsigned long fb_addr, int starlet) {
   //
   // Reset video interface.
   //
@@ -126,7 +136,8 @@ int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long f
   // Otherwise, use direct XFB in 640x480x16.
   //
   if (fb_base != 0) {
-    VIDEO_DICT_VALUE(video.mvirt) = fb_base;
+    memset((void*)fb_base, 0, 640 * 480 * 4);
+    VIDEO_DICT_VALUE(video.mvirt) = fb_addr;
     VIDEO_DICT_VALUE(video.depth) = 32;
     VIDEO_DICT_VALUE(video.rb)    = 640 * 4;
   } else {
@@ -138,7 +149,7 @@ int ob_flipper_vi_init(const char *path, unsigned long xfb_base, unsigned long f
   //
   // Startup Starlet FB to XFB conversion if running with FB bounce buffer.
   //
-  if (fb_base != 0) {
+  if (fb_base != 0 && starlet) {
     //
     // Stop any current conversion.
     //

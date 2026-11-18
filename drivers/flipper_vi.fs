@@ -70,6 +70,11 @@ headerless
 
   \ Device-level properties.
   \ Address, depth, and stride are set by C code.
+  \ The address is published here as well as on install: a client such as
+  \ Mac OS 9 takes the frame buffer from this property even when the display
+  \ was never opened as the Open Firmware console.
+  frame-buffer-adr encode-int " address" property
+  frame-buffer-adr encode-int " AAPL,address" property
   flipper-vi-video-height encode-int " height" property
   flipper-vi-video-width encode-int " width" property
   depth-bits-xt @ encode-int " depth" property
