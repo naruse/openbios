@@ -305,6 +305,13 @@ static phys_addr_t ea_to_phys(unsigned long ea, ucell *mode) {
         /* print_trans(); */
     }
 
+    /* Mac OS 9's emulated device region (see wii.h): one scratch page. */
+    if (is_wii_rvl() && phys >= RVL_OS9_EMU_BASE && phys < RVL_OS9_EMU_END) {
+        static char scratch[0x2000];
+        *mode = ofmem_arch_default_translation_mode(0);
+        return (((ucell)scratch + 0xfff) & ~0xfff) | (phys & 0xfff);
+    }
+
     /* Mac OS 9 address window (see wii.h). */
     if (is_wii_rvl() &&
         ((phys >= RVL_OS9_IO_WINDOW_BASE && phys < RVL_OS9_IO_WINDOW_END) ||

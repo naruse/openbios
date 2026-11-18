@@ -323,10 +323,56 @@ variable keyboard-phandle 0 keyboard-phandle !
     finish-device
   finish-device
 
-  \ Mac OS gets the controller at its window address (see wii.h). Done last:
-  \ the lookups above find the node by its physical unit address.
+  \ An ATA bus of the kind a Heathrow carries, with one disk. Mac OS drives
+  \ it with its own ATA Manager and disk driver; the registers are emulated
+  \ by the Mac OS kernel add-on, which gets the sectors from wherever the
+  \ machine really has storage. Sources 16 and 17 are the bus and its (unused)
+  \ DMA channel; no Wii device can raise them.
+  \
+  \ Apple's ATA driver refuses to start unless an ancestor of the bus has
+  \ device type "mac-io" and an "AAPL,address", so the bus sits under a
+  \ mac-io node that stands for the whole emulated device region. The
+  \ Trampoline takes a mac-io's base address from its second "reg" entry.
+  " /" find-device
+  new-device
+    " mac-io" device-name
+    " mac-io" device-type
+    " " encode-string " built-in" property
+    1 encode-int " #address-cells" property
+    1 encode-int " #size-cells" property
+    h# de000000 encode-int h# 01000000 encode-int encode+
+      h# de000000 encode-int encode+ h# 01000000 encode-int encode+ " reg" property
+    h# de000000 encode-int " AAPL,address" property
+
+    new-device
+      " ata-0" device-name
+      " ata" device-type
+      " heathrow-ata" encode-string " compatible" property
+      " ata-4" model
+      " ata" encode-string " AAPL,connector" property
+      " " encode-string " built-in" property
+      1 encode-int " #address-cells" property
+      0 encode-int " #size-cells" property
+      h# 10000 encode-int h# 1000 encode-int encode+
+        h# 11000 encode-int encode+ h# 200 encode-int encode+ " reg" property
+      h# de010000 encode-int h# de011000 encode-int encode+ " AAPL,address" property
+      0 encode-int " AAPL,bus-id" property
+      h# 526 encode-int h# 85 encode-int encode+ h# 25 encode-int encode+
+        h# 25 encode-int encode+ h# 25 encode-int encode+ 0 encode-int encode+
+        0 encode-int encode+ 0 encode-int encode+ " AAPL,pio-timing" property
+      d# 16 encode-int d# 17 encode-int encode+ " interrupts" property
+      " /interrupt-controller@0c003000" find-dev if
+        encode-int " interrupt-parent" property
+      then
+    finish-device
+  finish-device
+
+  \ Mac OS gets a Heathrow in the emulated device region (see wii.h): its
+  \ registers are answered by the Mac OS kernel add-on, not by the Flipper
+  \ PIC. Done last: the lookups above find the node by its physical unit
+  \ address.
   " /interrupt-controller@0c003000" find-device
-  h# dc003000 encode-int h# 100 encode-int encode+ " reg" property
+  h# de002000 encode-int h# 100 encode-int encode+ " reg" property
 
   active-package!
 ;

@@ -55,15 +55,22 @@ int rvl_gecko_create_node(void);
 // tree handed to Mac OS carries window addresses instead, and the patched
 // Trampoline (tools/patches/trampoline-cave.S in the project) maps them:
 //
-//   0xDC000000-0xDEFFFFFF -> physical 0x0C000000-0x0EFFFFFF  (registers)
+//   0xDC000000-0xDDFFFFFF -> physical 0x0C000000-0x0DFFFFFF  (registers)
 //   0xE0000000-0xE11FFFFF -> physical 0x10000000-0x111FFFFF  (MEM2 below the RAM bank)
+//
+// 0xDE000000-0xDEFFFFFF is where Mac OS finds devices the Wii does not have
+// (VIA, Heathrow, ATA). Mac OS leaves it unmapped and emulates them on each
+// fault. Under Open Firmware nothing emulates them, so the whole region is
+// backed by one scratch page: the Trampoline's few writes there go nowhere.
 //
 // Open Firmware resolves the same addresses (see ea_to_phys in ofmem.c), so
 // the Trampoline can reach the hardware through them before Mac OS starts.
 //
 #define RVL_OS9_WINDOW_OFFSET                   0xD0000000
 #define RVL_OS9_IO_WINDOW_BASE                  0xDC000000
-#define RVL_OS9_IO_WINDOW_END                   0xDF000000
+#define RVL_OS9_IO_WINDOW_END                   0xDE000000
+#define RVL_OS9_EMU_BASE                        0xDE000000
+#define RVL_OS9_EMU_END                         0xDF000000
 #define RVL_OS9_MEM2_WINDOW_BASE                0xE0000000
 #define RVL_OS9_MEM2_WINDOW_END                 0xE1200000
 
