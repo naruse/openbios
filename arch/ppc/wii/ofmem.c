@@ -304,6 +304,14 @@ static phys_addr_t ea_to_phys(unsigned long ea, ucell *mode) {
         /* print_phys_range(); */
         /* print_trans(); */
     }
+
+    /* Mac OS 9 address window (see wii.h). */
+    if (is_wii_rvl() &&
+        ((phys >= RVL_OS9_IO_WINDOW_BASE && phys < RVL_OS9_IO_WINDOW_END) ||
+         (phys >= RVL_OS9_MEM2_WINDOW_BASE && phys < RVL_OS9_MEM2_WINDOW_END))) {
+        phys -= RVL_OS9_WINDOW_OFFSET;
+        *mode = ofmem_arch_io_translation_mode(phys);
+    }
     return phys;
 }
 

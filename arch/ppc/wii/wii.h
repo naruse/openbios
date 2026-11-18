@@ -49,6 +49,28 @@ int rvl_gecko_create_node(void);
 // Optional RAM disk image placed in free MEM2 by the loader (see drivers/wii_ramdisk.c).
 #define RVL_RAMDISK_BASE                        0x10400000
 
+//
+// Mac OS 9 address window. Mac OS reserves low logical addresses for RAM, so
+// it cannot see the Wii's registers at their physical addresses. The device
+// tree handed to Mac OS carries window addresses instead, and the patched
+// Trampoline (tools/patches/trampoline-cave.S in the project) maps them:
+//
+//   0xDC000000-0xDEFFFFFF -> physical 0x0C000000-0x0EFFFFFF  (registers)
+//   0xE0000000-0xE11FFFFF -> physical 0x10000000-0x111FFFFF  (MEM2 below the RAM bank)
+//
+// Open Firmware resolves the same addresses (see ea_to_phys in ofmem.c), so
+// the Trampoline can reach the hardware through them before Mac OS starts.
+//
+#define RVL_OS9_WINDOW_OFFSET                   0xD0000000
+#define RVL_OS9_IO_WINDOW_BASE                  0xDC000000
+#define RVL_OS9_IO_WINDOW_END                   0xDF000000
+#define RVL_OS9_MEM2_WINDOW_BASE                0xE0000000
+#define RVL_OS9_MEM2_WINDOW_END                 0xE1200000
+
+// Part of MEM2 handed to the OS as general RAM (MEM1_MAP_BASE in ofmem.c).
+#define RVL_MEM2_BANK_BASE                      0x11200000
+#define RVL_MEM2_BANK_SIZE                      0x02800000
+
 #define CAFE_LATTE_IPCPPCMSG        0x0D800000
 #define CAFE_LATTE_IPCPPCCTRL       0x0D800004
 #define CAFE_CMD_POWEROFF           0xCAFE0001

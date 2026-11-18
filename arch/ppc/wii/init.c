@@ -557,6 +557,8 @@ arch_of_init(void)
         fword("fixup-device-tree-cafe");
     } else {
         fword("fixup-device-tree-rvl");
+        // This branch boots Mac OS 9: reshape the tree into what its Trampoline accepts.
+        fword("fixup-device-tree-os9");
     }
 
     //
@@ -577,6 +579,17 @@ arch_of_init(void)
     PUSH(ram_size & 0xffffffff);
     fword("encode-int");
     fword("encode+");
+    if (wii_platform != WII_CAFE) {
+        // Mac OS 9 takes its RAM banks from this property and cannot use
+        // the virtual MEM1 extension that ofmem sets up, so also list the
+        // part of MEM2 behind that extension as a second physical bank.
+        push_physaddr(RVL_MEM2_BANK_BASE);
+        fword("encode-phys");
+        fword("encode+");
+        PUSH(RVL_MEM2_BANK_SIZE);
+        fword("encode-int");
+        fword("encode+");
+    }
     push_str("reg");
     fword("property");
 

@@ -214,6 +214,123 @@ variable keyboard-phandle 0 keyboard-phandle !
   active-package!
 ;
 
+\ -------------------------------------------------------------------------
+\ Mac OS 9 personality (Wii)
+\ -------------------------------------------------------------------------
+\
+\ The Mac OS 9 Trampoline only accepts an OpenPIC or a Heathrow/Paddington
+\ interrupt controller, and in Heathrow mode it does not follow cascades: it
+\ expects one controller with a flat space of 64 sources. So the Flipper PIC
+\ is presented as the Heathrow, and the Hollywood PIC behind its line 14 is
+\ folded into the same space:
+\
+\    sources  0-31   Flipper PIC lines
+\    sources 32-63   Hollywood PIC lines 0-31
+\
+\ The Trampoline finds the controller through the "interrupt-controller"
+\ property of /chosen, which it uses as a package handle.
+
+\ Active package: move from Hollywood line n to flat source 32+n.
+: os9-flatten-hlwd-irq ( -- )
+  " interrupts" active-package get-package-property 0= if
+    decode-int nip nip d# 32 + encode-int " interrupts" property
+  then
+  " /interrupt-controller@0c003000" find-dev if
+    encode-int " interrupt-parent" property
+  then
+;
+
+: fixup-device-tree-os9 ( -- )
+  active-package
+
+  \ The Mac OS ROM boot script refuses machines that are not "MacRISC".
+  " /" find-device
+  " MacRISC" encode-string " MacRISC2" encode-string encode+
+    " Power Macintosh" encode-string encode+ " compatible" property
+
+  " /interrupt-controller@0c003000" find-device
+  " heathrow" encode-string " NTDOY,pic" encode-string encode+ " compatible" property
+
+  \ No longer a controller as far as the tree is concerned; it stays as the
+  \ device that owns Flipper line 14.
+  " /interrupt-controller@0d800030" find-device
+  " interrupt-controller" delete-property
+
+  " /aes" find-device os9-flatten-hlwd-irq
+  " /sha" find-device os9-flatten-hlwd-irq
+  " /usb@0d040000" find-device os9-flatten-hlwd-irq
+  " /usb@0d050000" find-device os9-flatten-hlwd-irq
+  " /usb@0d060000" find-device os9-flatten-hlwd-irq
+  " /sdhc" find-device os9-flatten-hlwd-irq
+  " /sdio" find-device os9-flatten-hlwd-irq
+  " /ipc" find-device os9-flatten-hlwd-irq
+
+  " /chosen" find-device
+  " /interrupt-controller@0c003000" find-dev if
+    encode-int " interrupt-controller" property
+  then
+
+  \ Mac OS 9 will not start without a VIA and a power manager plug-in, and
+  \ the Wii has neither. Describe a VIA with a Cuda behind it, as on a Blue &
+  \ White G3 (which also goes with the Heathrow-style interrupt controller
+  \ above), so the Trampoline loads the Cuda power plug-in. That plug-in is
+  \ far less demanding than the Core99 PMU one, which expects KeyLargo,
+  \ UniNorth and thermostats around it.
+  \
+  \ Nothing answers at this address yet: physical 0x0e000000 (window address
+  \ de000000) is deliberately not RAM or a Wii register block, so that every
+  \ access to it shows up while the VIA/Cuda emulation is being built.
+  \ It claims Flipper line 15, which no Wii device can raise.
+  " /" find-device
+  new-device
+    " via-cuda" device-name
+    " via-cuda" device-type
+    " cuda" encode-string " compatible" property
+    " " encode-string " built-in" property
+    1 encode-int " #address-cells" property
+    0 encode-int " #size-cells" property
+    h# de000000 encode-int h# 2000 encode-int encode+ " reg" property
+    \ Mac OS drivers take the VIA's address from here. The Trampoline only
+    \ creates this property for children of a mac-io node.
+    h# de000000 encode-int " AAPL,address" property
+    d# 15 encode-int " interrupts" property
+    " /interrupt-controller@0c003000" find-dev if
+      encode-int " interrupt-parent" property
+    then
+
+    \ The ADB bus behind the Cuda. Without this node the Trampoline assumes
+    \ USB-emulated ADB and the ROM installs its Egret flavour of the chip
+    \ manager, which drives the handshake lines the other way up.
+    new-device
+      " adb" device-name
+      " adb" device-type
+      " adb" encode-string " compatible" property
+      1 encode-int " #address-cells" property
+      0 encode-int " #size-cells" property
+    finish-device
+
+    new-device
+      " rtc" device-name
+      " rtc" device-type
+      " rtc" encode-string " compatible" property
+    finish-device
+
+    new-device
+      " power-mgt" device-name
+      " power-mgt" device-type
+      " min-consumption-pwm-led" encode-string " mgt-kind" property
+      " cuda" encode-string " compatible" property
+    finish-device
+  finish-device
+
+  \ Mac OS gets the controller at its window address (see wii.h). Done last:
+  \ the lookups above find the node by its physical unit address.
+  " /interrupt-controller@0c003000" find-device
+  h# dc003000 encode-int h# 100 encode-int encode+ " reg" property
+
+  active-package!
+;
+
 \ Fixup device tree for Wii U platform
 : fixup-device-tree-cafe ( -- )
   active-package
