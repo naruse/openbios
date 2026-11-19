@@ -277,10 +277,9 @@ variable keyboard-phandle 0 keyboard-phandle !
   \ far less demanding than the Core99 PMU one, which expects KeyLargo,
   \ UniNorth and thermostats around it.
   \
-  \ Nothing answers at this address yet: physical 0x0e000000 (window address
-  \ de000000) is deliberately not RAM or a Wii register block, so that every
-  \ access to it shows up while the VIA/Cuda emulation is being built.
-  \ It claims Flipper line 15, which no Wii device can raise.
+  \ The VIA is emulated by the Mac OS kernel add-on. It sits at 16000 in the
+  \ emulated device region, where a Heathrow has its VIA (see the mac-io
+  \ node below), and claims line 15, which no Wii device can raise.
   " /" find-device
   new-device
     " via-cuda" device-name
@@ -289,10 +288,10 @@ variable keyboard-phandle 0 keyboard-phandle !
     " " encode-string " built-in" property
     1 encode-int " #address-cells" property
     0 encode-int " #size-cells" property
-    h# de000000 encode-int h# 2000 encode-int encode+ " reg" property
+    h# de016000 encode-int h# 2000 encode-int encode+ " reg" property
     \ Mac OS drivers take the VIA's address from here. The Trampoline only
     \ creates this property for children of a mac-io node.
-    h# de000000 encode-int " AAPL,address" property
+    h# de016000 encode-int " AAPL,address" property
     d# 15 encode-int " interrupts" property
     " /interrupt-controller@0c003000" find-dev if
       encode-int " interrupt-parent" property
@@ -333,6 +332,12 @@ variable keyboard-phandle 0 keyboard-phandle !
   \ device type "mac-io" and an "AAPL,address", so the bus sits under a
   \ mac-io node that stands for the whole emulated device region. The
   \ Trampoline takes a mac-io's base address from its second "reg" entry.
+  \
+  \ Offsets inside the region are a Heathrow's (interrupt controller at 10,
+  \ DBDMA channels at 8000, VIA at 16000, ATA at 20000). Some Mac OS code
+  \ takes them for granted instead of reading this tree: with the VIA at 0,
+  \ a write Mac OS makes to the start of mac-io while it enables the ATA
+  \ interrupt landed on the VIA's port B and broke the Cuda handshake.
   " /" find-device
   new-device
     " mac-io" device-name
@@ -353,9 +358,9 @@ variable keyboard-phandle 0 keyboard-phandle !
       " " encode-string " built-in" property
       1 encode-int " #address-cells" property
       0 encode-int " #size-cells" property
-      h# 10000 encode-int h# 1000 encode-int encode+
-        h# 11000 encode-int encode+ h# 200 encode-int encode+ " reg" property
-      h# de010000 encode-int h# de011000 encode-int encode+ " AAPL,address" property
+      h# 20000 encode-int h# 1000 encode-int encode+
+        h# 8b00 encode-int encode+ h# 100 encode-int encode+ " reg" property
+      h# de020000 encode-int h# de008b00 encode-int encode+ " AAPL,address" property
       0 encode-int " AAPL,bus-id" property
       h# 526 encode-int h# 85 encode-int encode+ h# 25 encode-int encode+
         h# 25 encode-int encode+ h# 25 encode-int encode+ 0 encode-int encode+
@@ -372,7 +377,7 @@ variable keyboard-phandle 0 keyboard-phandle !
   \ PIC. Done last: the lookups above find the node by its physical unit
   \ address.
   " /interrupt-controller@0c003000" find-device
-  h# de002000 encode-int h# 100 encode-int encode+ " reg" property
+  h# de000010 encode-int h# 20 encode-int encode+ " reg" property
 
   active-package!
 ;
