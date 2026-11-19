@@ -334,7 +334,8 @@ variable keyboard-phandle 0 keyboard-phandle !
   \ Trampoline takes a mac-io's base address from its second "reg" entry.
   \
   \ Offsets inside the region are a Heathrow's (interrupt controller at 10,
-  \ DBDMA channels at 8000, VIA at 16000, ATA at 20000). Some Mac OS code
+  \ DBDMA channels at 8000, VIA at 16000, ATA at 20000, NVRAM at 60000).
+  \ Some Mac OS code
   \ takes them for granted instead of reading this tree: with the VIA at 0,
   \ a write Mac OS makes to the start of mac-io while it enables the ATA
   \ interrupt landed on the VIA's port B and broke the Cuda handshake.
@@ -348,6 +349,20 @@ variable keyboard-phandle 0 keyboard-phandle !
     h# de000000 encode-int h# 01000000 encode-int encode+
       h# de000000 encode-int encode+ h# 01000000 encode-int encode+ " reg" property
     h# de000000 encode-int " AAPL,address" property
+
+    \ The NVRAM a Heathrow has: 8 KB, one byte every 16. Mac OS prepares
+    \ its NVRAM library before its clock library and gives up on the rest
+    \ if the first fails, so without this node there is no clock either.
+    new-device
+      " nvram" device-name
+      " nvram" device-type
+      " nvram" encode-string " compatible" property
+      1 encode-int " #address-cells" property
+      0 encode-int " #size-cells" property
+      h# 60000 encode-int h# 20000 encode-int encode+ " reg" property
+      h# de060000 encode-int " AAPL,address" property
+      h# 2000 encode-int " #bytes" property
+    finish-device
 
     new-device
       " ata-0" device-name
