@@ -189,7 +189,9 @@ variable keyboard-phandle 0 keyboard-phandle !
   " /" find-device
   new-device
     " video" device-name
-    " NTDOY,video" model
+    \ The name of the graphics card as Mac OS 9 is to show it. Drivers find
+    \ the node by "name" and "compatible", not by this.
+    " Nintendo Wii Graphics" model
     " NTDOY,video" encode-string " compatible" property
     " " encode-string " built-in" property
     h# 0c002000 encode-int 100 encode-int encode+
