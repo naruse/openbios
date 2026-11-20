@@ -387,6 +387,74 @@ variable keyboard-phandle 0 keyboard-phandle !
         encode-int " interrupt-parent" property
       then
     finish-device
+
+    \ The sound chip of a Power Macintosh G3 ("Screamer", Apple's AWACS)
+    \ on its sound bus, as Mac OS's own sound driver looks for it: the
+    \ chip's registers at 14000 and the two DBDMA channels that feed it
+    \ and take from it at 8800 and 8900. All of it is emulated by the Mac
+    \ OS kernel add-on, which plays the samples through the Wii's audio
+    \ output. Sources 18 to 20 are the chip and the two channels; no Wii
+    \ device can raise them.
+    \
+    \ The properties are those QEMU's OpenBIOS gives its Screamer (Mark
+    \ Cave-Ayland's work), with which Mac OS 9 is known to play.
+    new-device
+      " davbus" device-name
+      " soundbus" device-type
+      " davbus" encode-string " compatible" property
+      " " encode-string " built-in" property
+      h# 14000 encode-int h# 1000 encode-int encode+
+        h# 8800 encode-int encode+ h# 100 encode-int encode+
+        h# 8900 encode-int encode+ h# 100 encode-int encode+ " reg" property
+      h# de014000 encode-int h# de008800 encode-int encode+
+        h# de008900 encode-int encode+ " AAPL,address" property
+      d# 18 encode-int d# 19 encode-int encode+ d# 20 encode-int encode+
+        " interrupts" property
+      " /interrupt-controller@0c003000" find-dev if
+        encode-int " interrupt-parent" property
+      then
+      2 encode-int 4 encode-int encode+ 4 encode-int encode+
+        " AAPL,requested-priorities" property
+      " dav au45au49" encode-string " AAPL,clock-id" property
+
+      new-device
+        " sound" device-name
+        " soundchip" device-type
+        " screamer" encode-string " awacs" encode-string encode+ " compatible" property
+        " 343S0184" model
+        h# 106b encode-int " vendor-id" property
+        5 encode-int " device-id" property
+        0 encode-int " sub-frame" property
+        1 encode-int " object-model-version" property
+        2 encode-int h# 56220000 encode-int encode+ h# ac440000 encode-int encode+
+          " sample-rates" property
+        3 encode-int " #-detects" property
+        3 encode-int " #-features" property
+        2 encode-int " #-outputs" property
+        1 encode-int " #-inputs" property
+        h# ffffbf4d encode-int " icon-id" property
+        h# ffffbf44 encode-int " info-id" property
+        h# ffffbf4d encode-int " name-id" property
+        " none" encode-string " default-monitor" property
+        \ What is plugged into the chip, in Mac OS's own notation: a
+        \ speaker and headphones out, a microphone, a line and a modem in,
+        \ and how to tell from the chip's status which are connected.
+        " init operation 2 param 00000001 param-size 4" encode-string
+        " feature index 0 model Proj7PowerControl" encode-string encode+
+        " feature index 1 model USBSubwoofer" encode-string encode+
+        " feature index 2 model NotifySSprockets" encode-string encode+
+        " detect bit-mask 2 bit-match 2 device 2 index 0 model InSenseBitsDetect" encode-string encode+
+        " detect bit-mask 4 bit-match 4 device 16 index 1 model InSenseBitsDetect" encode-string encode+
+        " detect bit-mask 1 bit-match 0 device 32 index 2 model InSenseBitsDetect" encode-string encode+
+        " input icon-id -16526 index 0 name-id -20520 port-connection 2 port-type 0x656D6963 zero-gain 0 model ExternalMic" encode-string encode+
+        " input icon-id -16526 index 1 name-id -20528 port-connection 2 port-type 0x73696E6A zero-gain 0 model InputPort" encode-string encode+
+        " input icon-id -20184 index 2 name-id -20540 port-connection 3 port-type 0x6d6f646d zero-gain 0 model InputPort" encode-string encode+
+        " input index 3 model NoInput" encode-string encode+
+        " output device-mask 2 device-match 0 icon-id -16563 index 0 name-id -20525 port-connection 2 port-type 0x6973706B model OutputPort" encode-string encode+
+        " output device-mask 2 device-match 2 icon-id -16563 index 1 name-id -20524 port-connection 1 port-type 0x6864706E model OutputPort" encode-string encode+
+        " sound-objects" property
+      finish-device
+    finish-device
   finish-device
 
   \ Mac OS gets a Heathrow in the emulated device region (see wii.h): its
